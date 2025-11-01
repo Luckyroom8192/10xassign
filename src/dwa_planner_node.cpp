@@ -100,7 +100,6 @@ void DwaPlannerNode::compute_and_publish()
 {
     RCLCPP_DEBUG(this->get_logger(), "Computing command velocity...");
 
-    // Lock data and copy
     nav_msgs::msg::Odometry odom_copy;
     sensor_msgs::msg::LaserScan::SharedPtr scan_copy;
     geometry_msgs::msg::PoseStamped goal_copy;
@@ -117,17 +116,14 @@ void DwaPlannerNode::compute_and_publish()
         goal_copy = current_goal_;
     }
     
-    // --- GOAL CHECKING & LOGGING ---
     geometry_msgs::msg::Pose current_pose = odom_copy.pose.pose;
     double dx_goal = goal_copy.pose.position.x - current_pose.position.x;
     double dy_goal = goal_copy.pose.position.y - current_pose.position.y;
     double dist_to_goal = std::hypot(dx_goal, dy_goal);
 
-    // LOGGING YOU REQUESTED:
     RCLCPP_INFO(this->get_logger(), "Current distance to goal: %.2f meters", dist_to_goal);
 
     if (goal_reached_) {
-        // We are at the goal, stay stopped
         return;
     }
 
@@ -146,12 +142,11 @@ void DwaPlannerNode::compute_and_publish()
     // Get current state
     geometry_msgs::msg::Twist current_vel = odom_copy.twist.twist;
 
-    // --- Obstacle Pre-processing ---
     // Transform all laser scan points to the 'odom' frame once
     std::vector<geometry_msgs::msg::Point> obstacle_points_odom;
     geometry_msgs::msg::TransformStamped scan_to_odom_tf;
     try {
-        // Use tf2::TimePointZero for latest available transform
+        // Using tf2::TimePointZero for latest available transform
         scan_to_odom_tf = tf_buffer_->lookupTransform(
             "odom", scan_copy->header.frame_id, tf2::TimePointZero);
     } catch (tf2::TransformException &ex) {
@@ -230,14 +225,13 @@ void DwaPlannerNode::compute_and_publish()
     }
     else
     {
-        // No valid path found, stop the robot
+        // No valid path found
         cmd->linear.x = 0.0;
         cmd->angular.z = 0.0;
         RCLCPP_WARN(this->get_logger(), "No valid trajectory found!");
     }
     cmd_vel_pub_->publish(std::move(cmd));
 
-    // --- Phase 5: Visualization ---
     publish_visualizations(all_trajectories, best_traj);
 }
 
@@ -273,7 +267,7 @@ std::vector<geometry_msgs::msg::Pose> DwaPlannerNode::predict_trajectory(
 
     for (double t = dt_; t <= sim_time_; t += dt_)
     {
-        // Simple differential drive model
+        // Unicycle model update
         double delta_x = v * std::cos(current_theta) * dt_;
         double delta_y = v * std::sin(current_theta) * dt_;
         double delta_theta = w * dt_;
@@ -378,18 +372,12 @@ double DwaPlannerNode::evaluate_trajectory(
     const geometry_msgs::msg::PoseStamped& goal,
     const std::vector<geometry_msgs::msg::Point>& obstacles)
 {
-    // --- Obstacle Cost ---
     double cost_o = obstacle_cost(traj, obstacles);
-    // If it collides, it's infinitely bad
     if (cost_o == DBL_MAX)
     {
         return DBL_MAX;
     }
-
-    // --- Goal Distance Cost ---
     double cost_g = goal_dist_cost(traj, goal);
-
-    // --- Velocity Cost ---
     double cost_v = velocity_cost(traj);
 
     // --- Final Weighted Cost ---
@@ -429,23 +417,20 @@ double DwaPlannerNode::obstacle_cost(
         }
     }
 
-    // If the closest we get is inside the robot, this path is invalid
     if (min_dist_to_obs < robot_radius_)
     {
         return DBL_MAX;
     }
 
-    // Cost is inverse of distance: higher cost as we get closer
     return (1.0 / min_dist_to_obs);
 }
 
 double DwaPlannerNode::velocity_cost(const Trajectory& traj)
 {
-    // Penalize slow trajectories to encourage moving
     return max_vel_x_ - traj.v_samp;
 }
 
-} // namespace custom_dwa_planner
+}
 
 int main(int argc, char **argv)
 {

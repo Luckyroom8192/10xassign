@@ -33,7 +33,7 @@ private:
         double v_samp;
         double w_samp;
         std::vector<geometry_msgs::msg::Pose> poses;
-        double cost{0.0}; // We'll use this in the next phase
+        double cost{0.0}; 
     };
 
     // DWA Parameters
@@ -47,12 +47,13 @@ private:
     int v_samples_;
     int w_samples_;
     double controller_frequency_;
+    double robot_radius_;
+    double goal_tolerance_;
+
     // Cost Function Weights
     double w_goal_dist_;
     double w_obstacle_;
     double w_velocity_;
-    double robot_radius_;
-    double goal_tolerance_;
 
     // Helper Functions
     VelocityWindow calculate_dynamic_window(const geometry_msgs::msg::Twist& current_vel);
@@ -110,4 +111,4 @@ private:
     bool goal_reached_{false};
 };
 
-} // namespace custom_dwa_planner
+}

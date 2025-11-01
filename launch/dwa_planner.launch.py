@@ -16,9 +16,6 @@ def generate_launch_description():
     pkg_turtlebot3_gazebo = get_package_share_directory('turtlebot3_gazebo')
 
     # --- 1. Launch the Turtlebot3 Gazebo simulation ---
-    # This launch file will start Gazebo, spawn the robot,
-    # and start robot_state_publisher and the Gazebo plugins
-    # (which publish /odom, /scan, and the odom->base_link TF).
     turtlebot3_sim_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_turtlebot3_gazebo, 'launch', 'turtlebot3_world.launch.py')
